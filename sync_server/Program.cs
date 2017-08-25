@@ -8,6 +8,8 @@ namespace sync_server
 {
     class Program
     {
+        //socket example from https://www.codeproject.com/Articles/10649/An-Introduction-to-Socket-Programming-in-NET-using
+        //try Socket here: https://docs.microsoft.com/en-us/dotnet/framework/network-programming/socket-code-examples
         static TcpListener listener;
         const int ClientLIMIT = 5; //5 concurrent clients
 
