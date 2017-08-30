@@ -5,7 +5,7 @@
     "tasks": [
         {
             "taskName": "build",
-            "command": "dotnet",
+            "command": "dotnet build",
             "type": "shell",
             "group": "build",
             "presentation": {
