@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 
@@ -8,6 +9,10 @@ namespace sync_client
     {
         static void Main(string[] args)
         {
+
+
+            
+            
             Console.WriteLine("Hello World!");
             TcpClient client = new TcpClient("127.0.0.1", 8001);
             try
