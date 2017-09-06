@@ -9,10 +9,11 @@ namespace sync_client
     {
         static void Main(string[] args)
         {
-
+            FileScanner scn = new FileScanner();
+            scn.Scan();
 
             
-            
+            return;
             Console.WriteLine("Hello World!");
             TcpClient client = new TcpClient("127.0.0.1", 8001);
             try
