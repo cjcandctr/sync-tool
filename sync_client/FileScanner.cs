@@ -16,9 +16,10 @@ namespace sync_client
             scanBase = new List<string>();
             scanBase.Add(@"C:\Temp\delete");
             excludeFile = new List<string>();
-            excludeFile.Add(@"C:\sLeonFiles\PersonalInfo\ML");
-            excludeFile.Add(@"C:\sLeonFiles\PersonalInfo\MyPic");
-            excludeFile.Add(@"C:\sLeonFiles\PersonalInfo\Podcast");                        
+            // excludeFile.Add(@"C:\sLeonFiles\PersonalInfo\ML");
+            // excludeFile.Add(@"C:\sLeonFiles\PersonalInfo\MyPic");
+            // excludeFile.Add(@"C:\sLeonFiles\PersonalInfo\Podcast");
+            excludeFile.Add(@"C:\Temp\delete\PropertyInfo_dev_20170707.5");
 
         }
 
@@ -47,9 +48,22 @@ namespace sync_client
                 string[] files = Directory.GetFileSystemEntries(folder,"*.*" ,SearchOption.AllDirectories); 
                 foreach(string file in files)
                 {
-                    if(excludeFile.Contains(file)) return;
-                    
-                    Debug.Print(file);
+                    if(excludeFile.Contains(file)) continue;
+                    if(index.ContainsKey(file)) 
+                    {
+                        var item = index.GetValueOrDefault(file);
+                        DateTime lastMod = File.GetLastWriteTime(file);
+                        if (lastMod != item.UpdateTime)
+                        {
+                            item.IsChanged = true;
+                        }
+                    }
+                    else
+                    {
+                        SyncIndexItem item = new SyncIndexItem();
+                    }
+                    //if(File.GetAttributes(file).HasFlag(FileAttributes.Directory) && !Directory.EnumerateFileSystemEntries(file).Any() )
+                    Debug.Print(file + " " );
                 }
                 return;
             } );
