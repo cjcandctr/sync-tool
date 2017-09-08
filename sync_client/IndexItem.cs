@@ -2,7 +2,7 @@ using System;
 
 namespace sync_client
 {
-    public class SyncIndexItem
+    public class IndexItem
     {
         public string Path {get; set;}
         public bool IsFolder{get;set;}
