@@ -1,0 +1,6 @@
+{
+    "scan_base": ["/home/leon/test1"],
+    "ignored_path": [""],
+    "size_limit_MB": 8,
+    "exclude_type": ["exe"]
+}

@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace sync_client
 {
@@ -9,23 +11,18 @@ namespace sync_client
     {
         Dictionary<string, IndexItem> localIndex = null;
         Dictionary<string, IndexItem> serverIndex = null;
-        List<string> scanBase = null;
-        List<string> excludeFile = null;
+        public static ConfigMan conf = null;
         public FileScanner()
         {
-            scanBase = new List<string>();
-            scanBase.Add(@"C:\Temp\delete");
-            excludeFile = new List<string>();
-            // excludeFile.Add(@"C:\sLeonFiles\PersonalInfo\ML");
-            // excludeFile.Add(@"C:\sLeonFiles\PersonalInfo\MyPic");
-            // excludeFile.Add(@"C:\sLeonFiles\PersonalInfo\Podcast");
-            excludeFile.Add(@"C:\Temp\delete\PropertyInfo_dev_20170707.5");
+            conf = new ConfigMan();        
+            //conf.ScanBase.Add(@"C:\Temp\delete");            
+            //conf.IgnoredPath.Add(@"C:\Temp\delete\PropertyInfo_dev_20170707.5");
 
         }
 
         public Tuple<List<SyncItem>,List<SyncItem>> Scan()
         {
-            localIndex = UpdateIndex(localIndex, scanBase, excludeFile);
+            localIndex = UpdateIndex(localIndex, conf.ScanBase, conf.IgnoredPath);
             serverIndex = GetServerIndex();
             return BuildSyncItem(localIndex, serverIndex);
         }
@@ -37,12 +34,17 @@ namespace sync_client
 
             List<SyncItem> syncsLocal = new List<SyncItem>();
             List<SyncItem> syncsServer = new List<SyncItem>();
+            
+            //var notInServer = localIndex.Keys.Except(serverIndex.Keys);            
+            
             foreach(var localPair in localIndex)
             {       
                 if(serverIndex.ContainsKey(localPair.Key))         
                 {
                     var localItem = localPair.Value;
                     var serverItem = serverIndex.GetValueOrDefault(localPair.Key);
+
+                    //TODO Server delete the file
                     if(localItem.IsChanged && !serverItem.IsChanged)
                     {
                         SyncItem si = new SyncItem();
@@ -58,9 +60,17 @@ namespace sync_client
                     {
                         
                     }
+                    //TODO local delete the file
                 }
-                
+                else
+                {
+                    SyncItem si = new SyncItem();
+                    
+                    syncsServer.Add(si);
+                }                
             }
+
+            var notInLocal = serverIndex.Keys.Except(localIndex.Keys);
             
             return new Tuple<List<SyncItem>, List<SyncItem>>(syncsLocal,syncsServer);
         }
@@ -108,8 +118,10 @@ namespace sync_client
 
         private bool InExcludeFolder(List<string> excludes, string file)
         {
+            if(excludes.Count ==0) return false;
             foreach(var exc in excludes)
             {
+                if(string.IsNullOrEmpty(exc)) return false;
                 if(file.Contains(exc)) return true;                
             }
             return false;

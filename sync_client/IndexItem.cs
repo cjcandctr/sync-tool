@@ -10,5 +10,6 @@ namespace sync_client
         public DateTime UpdateTime {get;set;}
         public bool IsChanged {get;set;}
         public string FileHash {get;set;}
+        public bool IsDeleted{get;set;}
     }
 }
