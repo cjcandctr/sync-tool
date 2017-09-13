@@ -27,6 +27,7 @@ namespace sync_client
                 AddToList(ScanBase, jso["scan_base"]);
                 AddToList(IgnoredPath, jso["ignored_path"]);
                 AddToList(ExcludeType, jso["exclude_type"]);
+                SizeLimit = jso["size_limit_MB"].ToObject<int>();
                 
             }
             catch(System.Exception)

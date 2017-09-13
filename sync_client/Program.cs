@@ -10,9 +10,9 @@ namespace sync_client
         static void Main(string[] args)
         {
             FileScanner scn = new FileScanner();
-            scn.Scan();
-
-            
+            var tuple = scn.Scan();
+            UpdateLocal(tuple.Item1);
+            UpdateServer(tuple.Item2);
             return;
             Console.WriteLine("Hello World!");
             TcpClient client = new TcpClient("127.0.0.1", 8001);
@@ -42,5 +42,17 @@ namespace sync_client
                 client.Close();
             }
         }
+
+        private static async void UpdateServer(List<SyncItem> item2)
+        {
+            //throw new NotImplementedException();
+        }
+
+        private static async void UpdateLocal(List<SyncItem> item1)
+        {
+
+            //throw new NotImplementedException();
+        }
+
     }
 }

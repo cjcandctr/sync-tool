@@ -2,6 +2,7 @@ using System;
 
 namespace sync_client
 {
+    [Serializable]
     public class IndexItem
     {
         public string Path {get; set;}
@@ -11,5 +12,6 @@ namespace sync_client
         public bool IsChanged {get;set;}
         public string FileHash {get;set;}
         public bool IsDeleted{get;set;}
+        public string Base { get; internal set; }
     }
 }

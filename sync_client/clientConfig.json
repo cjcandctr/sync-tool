@@ -1,6 +1,6 @@
 {
-    "scan_base": ["/home/leon/test1"],
-    "ignored_path": [""],
+    "scan_base": ["/home/leon/test1", "C:/Temp/delete"],
+    "ignored_path": ["C:/Temp/delete/PropertyInfo_dev_20170707.5", "C:/Temp/delete/weichapic"],
     "size_limit_MB": 8,
     "exclude_type": ["exe"]
 }
