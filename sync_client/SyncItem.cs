@@ -5,13 +5,14 @@ namespace sync_client
     [Serializable]
     public class SyncItem
     {
-        private IndexItem serverItem;
+        private IndexItem indexItem;
 
-        public SyncItem(IndexItem serverItem)
+        public SyncItem(IndexItem item)
         {
-            this.serverItem = serverItem;
+            this.indexItem = item;
         }
         public SyncChangeType ChangeType {get;set;} 
+        public byte[] Data {get;set;}
     }
 
     public enum SyncChangeType 

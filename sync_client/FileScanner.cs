@@ -14,10 +14,7 @@ namespace sync_client
         public static ConfigMan conf = null;
         public FileScanner()
         {
-            conf = new ConfigMan();        
-            //conf.ScanBase.Add(@"C:\Temp\delete");            
-            //conf.IgnoredPath.Add(@"C:\Temp\delete\PropertyInfo_dev_20170707.5");
-
+            if(conf == null) conf = new ConfigMan();        
         }
 
         public Tuple<List<SyncItem>,List<SyncItem>> Scan()
@@ -90,22 +87,44 @@ namespace sync_client
         {
 
             //Mockup here:            
-            IndexItem item = new IndexItem();
-                        item.Base = folder;
-                        item.Path = file.Replace(folder, "").Replace(@"\","/");
-                        item.FileHash = GetHash(folder, file);
-                        item.IsChanged = false;
-                        item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
-                        item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
-                        item.UpdateTime = DateTime.Now;
-                        index.Add(file.Replace(folder, "").Replace(@"\","/"), item);
+            SocketConnector.UpdateServerIndex(serverIndex);
+            return serverIndex;
+            return LoadMock();
             
             if(serverIndex == null) 
             {
                 // TODO get from server
                 serverIndex = new Dictionary<string, IndexItem>();                                
-            }
-            serverIndex.Add(,item);
+            }            
+            return serverIndex;
+        }
+
+        private Dictionary<string, IndexItem> LoadMock()
+        {
+            serverIndex = new Dictionary<string, IndexItem>();      
+            IndexItem item = new IndexItem();
+            string folder = @"C:\Temp\delete2";
+            string file = folder + "/HAPSA Issues Log Files.zip";
+            item.Base = folder;
+            item.Path = file.Replace(folder, ".").Replace(@"\","/");
+            item.FileHash = GetHash(folder, file);
+            item.IsChanged = false;
+            item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
+            item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
+            item.UpdateTime = DateTime.Now;            
+            serverIndex.Add(item.Path,item);
+            item = new IndexItem();
+            file = folder + "/mmexport1505092189115.jpg";
+            item.Base = folder;
+            item.Path = file.Replace(folder, ".").Replace(@"\","/");
+            item.FileHash = GetHash(folder, file);
+            item.IsChanged = false;
+            item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
+            item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
+            item.UpdateTime = DateTime.Now;  
+            serverIndex.Add(item.Path,item);
+            
+            
             return serverIndex;
         }
 
@@ -133,13 +152,13 @@ namespace sync_client
                     {
                         IndexItem item = new IndexItem();
                         item.Base = folder;
-                        item.Path = file.Replace(folder, "").Replace(@"\","/");
+                        item.Path = file.Replace(folder, ".").Replace(@"\","/");
                         item.FileHash = GetHash(folder, file);
                         item.IsChanged = false;
                         item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
                         item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
                         item.UpdateTime = DateTime.Now;
-                        index.Add(file.Replace(folder, "").Replace(@"\","/"), item);
+                        index.Add(item.Path, item);
                     }                    
                 }
                 

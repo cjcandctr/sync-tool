@@ -11,6 +11,9 @@ namespace sync_client
         public List<string> IgnoredPath{get;set;}
         public int SizeLimit {get;set;}
         public List<string> ExcludeType {get;set;}
+        public string ServerAddress {get;set;}
+        public int ServerPort {get;set;}
+        public bool IsSSL {get;set;}
 
 
         public ConfigMan()
@@ -19,7 +22,9 @@ namespace sync_client
             this.IgnoredPath = new List<string>();
             this.SizeLimit = -1;
             this.ExcludeType = new List<string>();
-
+            ServerAddress ="127.0.0.1";
+            ServerPort = 8001;
+            IsSSL = false;
             try 
             {
                 JObject jso = JObject.Parse(File.ReadAllText(@"./clientConfig.json"));
@@ -28,7 +33,9 @@ namespace sync_client
                 AddToList(IgnoredPath, jso["ignored_path"]);
                 AddToList(ExcludeType, jso["exclude_type"]);
                 SizeLimit = jso["size_limit_MB"].ToObject<int>();
-                
+                ServerAddress = jso["server_address"].ToObject<string>();
+                ServerPort = jso["server_port"].ToObject<int>();      
+                IsSSL = jso["use_ssl"].ToObject<bool>();
             }
             catch(System.Exception)
             {

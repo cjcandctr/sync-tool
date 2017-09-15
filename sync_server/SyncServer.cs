@@ -42,31 +42,7 @@ namespace sync_server
         {
             while (true)
             {
-                Socket soc = listener.AcceptSocket();
-                //soc.SetSocketOption(SocketOptionLevel.Socket,
-                //        SocketOptionName.ReceiveTimeout,10000);
-                //log
-                try
-                {
-                    Stream s = new NetworkStream(soc);
-                    StreamReader sr = new StreamReader(s);
-                    StreamWriter sw = new StreamWriter(s);
-                    sw.AutoFlush = true; // enable automatic flushing
-                    sw.WriteLine("service is available");
-                    while (true)
-                    {
-                        string name = sr.ReadLine();
-                        if (name == "" || name == null) break;
-                        sw.WriteLine("message recieved" + name);
-                    }
-                    s.Close();
-                }
-                catch (Exception)
-                {
-                    //Log
-                }
-                //log
-                soc.Close();
+                SocketConnector.UpdateIndex(listener);
             }
         }
 

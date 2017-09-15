@@ -12,6 +12,6 @@ namespace sync_client
         public bool IsChanged {get;set;}
         public string FileHash {get;set;}
         public bool IsDeleted{get;set;}
-        public string Base { get; internal set; }
+        public string Base { get; set; }
     }
 }
