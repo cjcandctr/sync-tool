@@ -1,8 +1,8 @@
 using System;
+using Newtonsoft.Json;
 
 namespace sync_client
-{
-    [Serializable]
+{    
     public class IndexItem
     {
         public string Path {get; set;}
@@ -13,5 +13,6 @@ namespace sync_client
         public string FileHash {get;set;}
         public bool IsDeleted{get;set;}
         public string Base { get; set; }
+
     }
 }

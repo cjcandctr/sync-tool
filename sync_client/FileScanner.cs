@@ -86,10 +86,11 @@ namespace sync_client
         private Dictionary<string, IndexItem> UpdateServerIndex()
         {
 
-            //Mockup here:            
-            SocketConnector.UpdateServerIndex(serverIndex);
+            //Mockup here:
+            SocketConnector conn = new SocketConnector();   
+            conn.UpdateServerIndex(serverIndex);
             return serverIndex;
-            return LoadMock();
+            return MockServerIndex();
             
             if(serverIndex == null) 
             {
@@ -99,7 +100,7 @@ namespace sync_client
             return serverIndex;
         }
 
-        private Dictionary<string, IndexItem> LoadMock()
+        private Dictionary<string, IndexItem> MockServerIndex()
         {
             serverIndex = new Dictionary<string, IndexItem>();      
             IndexItem item = new IndexItem();

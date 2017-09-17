@@ -23,7 +23,7 @@ namespace sync_server
             StorageLocation = "./Storage/";
             User = "admin";
             Pass = "admin";
-            ConnectionLIMIT = 3;
+            ConnectionLIMIT = 1;
         }
     }
 }

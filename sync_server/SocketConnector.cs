@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
+using Newtonsoft.Json;
 using sync_client;
 //??? 一模一样的类 在客户端和服务端写两遍, 使用Binary序列化的结果会不会一样? 猜测是一样的...
 namespace sync_server
@@ -30,10 +31,13 @@ namespace sync_server
         }
 
         internal static void UpdateIndex(TcpListener listener)
-        {
-            IndexItem a = new IndexItem();
-            Socket soc = listener.AcceptSocket();
+        {            
             Dictionary<string, IndexItem> dic = LoadMockupDic();
+            
+            //var json = JsonConvert.SerializeObject(dic, Formatting.Indented);
+            //var dic1 = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(json1);    
+            Socket soc = listener.AcceptSocket();
+                        
             //soc.SetSocketOption(SocketOptionLevel.Socket,
             //        SocketOptionName.ReceiveTimeout,10000);
             //log
@@ -42,14 +46,15 @@ namespace sync_server
                 Stream s = new NetworkStream(soc);
                 StreamReader sr = new StreamReader(s);
                 StreamWriter sw = new StreamWriter(s);
-                sw.AutoFlush = true; // enable automatic flushing
-                sw.WriteLine("service is available");
-                while (true)
-                {
-                    string name = sr.ReadLine();
-                    if (name == "" || name == null) break;
-                    sw.WriteLine("message recieved" + name);
-                }
+                //sw.AutoFlush = true; // enable automatic flushing
+                sw.Write(JsonConvert.SerializeObject(dic, Formatting.Indented));
+                // while (true)
+                // {
+                //     string name = sr.ReadLine();
+                //     if (name == "" || name == null) break;
+                //     sw.WriteLine("message recieved" + name);
+                // }
+                sw.Flush();
                 s.Close();
             }
             catch (Exception)
@@ -92,8 +97,8 @@ namespace sync_server
         {
             Dictionary<string, IndexItem> serverIndex = new Dictionary<string, IndexItem>();      
             IndexItem item = new IndexItem();
-            string folder = @"C:\Temp\delete2";
-            string file = folder + "/HAPSA Issues Log Files.zip";
+            string folder = @"./mock-data";
+            string file = folder + "/aText.txt";
             item.Base = folder;
             item.Path = file.Replace(folder, ".").Replace(@"\","/");
             //item.FileHash = GetHash(folder, file);
@@ -103,7 +108,7 @@ namespace sync_server
             item.UpdateTime = DateTime.Now;            
             serverIndex.Add(item.Path,item);
             item = new IndexItem();
-            file = folder + "/mmexport1505092189115.jpg";
+            file = folder + "/btest.doc";
             item.Base = folder;
             item.Path = file.Replace(folder, ".").Replace(@"\","/");
             //item.FileHash = GetHash(folder, file);
