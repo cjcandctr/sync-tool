@@ -39,7 +39,8 @@ namespace sync_client
             }
             catch(System.Exception)
             {
-                ScanBase.Add(@"./");                
+                if(ScanBase.Count==0)
+                    ScanBase.Add(@"./");                
             }
         }
 

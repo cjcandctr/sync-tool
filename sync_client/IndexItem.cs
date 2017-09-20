@@ -6,6 +6,7 @@ namespace sync_client
     public class IndexItem
     {
         public string Path {get; set;}
+        public string ServerBase {get;set;}
         public bool IsFolder{get;set;}
         public bool IsEmpty{get;set;}
         public DateTime UpdateTime {get;set;}

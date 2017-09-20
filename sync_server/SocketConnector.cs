@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
+using System.Text;
+using System.Threading;
 using Newtonsoft.Json;
 using sync_client;
 //??? 一模一样的类 在客户端和服务端写两遍, 使用Binary序列化的结果会不会一样? 猜测是一样的...
@@ -10,116 +12,117 @@ namespace sync_server
 {
     public class SocketConnector
     {
-        private static TcpClient client;        
-        public static ConfigManager conf = null;
-        public SocketConnector()
-        {
-            //conf = new ConfigMan();
-            //client = new TcpClient(conf.ServerAddress, conf.ServerPort);
+        private TcpClient tcp;                
+        int timeout = 1 * 60 * 1000;
+        StreamReader reader;
+        StreamWriter writer;
+        public SocketConnector(TcpListener listener)
+        {                    
+            tcp = listener.AcceptTcpClient();
+            
+            reader = new StreamReader(tcp.GetStream());
+            writer = new StreamWriter(tcp.GetStream());
         }
         ~SocketConnector()
         {
-            // if(client != null)
-            //     try 
-            //     {
-            //         client.Close();
-            //     }
-            //     catch(Exception)
-            //     {
-            //         Debug.Print("close tcp client exception");
-            //     }
+            if(tcp != null)
+                try 
+                {
+                    tcp.Close();
+                }
+                catch(Exception)
+                {
+                    Debug.Print("close tcp client exception");
+                }
         }
 
-        internal static void UpdateIndex(TcpListener listener)
-        {            
-            Dictionary<string, IndexItem> dic = LoadMockupDic();
-            
+        internal void SendFullIndex(Dictionary<string, IndexItem> dic)
+        {                                    
             //var json = JsonConvert.SerializeObject(dic, Formatting.Indented);
             //var dic1 = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(json1);    
-            Socket soc = listener.AcceptSocket();
+            if(dic == null || dic.Count == 0)
+            {
+
+            }
                         
             //soc.SetSocketOption(SocketOptionLevel.Socket,
             //        SocketOptionName.ReceiveTimeout,10000);
             //log
             try
-            {
-                Stream s = new NetworkStream(soc);
-                StreamReader sr = new StreamReader(s);
-                StreamWriter sw = new StreamWriter(s);
-                //sw.AutoFlush = true; // enable automatic flushing
-                sw.Write(JsonConvert.SerializeObject(dic, Formatting.Indented));
-                // while (true)
-                // {
-                //     string name = sr.ReadLine();
-                //     if (name == "" || name == null) break;
-                //     sw.WriteLine("message recieved" + name);
-                // }
-                sw.Flush();
-                s.Close();
+            {                
+                
+
+                var strBlock = JsonConvert.SerializeObject(dic, Formatting.Indented);
+                sendString(strBlock);
+                
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Debug.Print(ex.Message);
                 //Log
             }
             //log
-            soc.Close();
-
-
-
-            // Socket soc = listener.AcceptSocket();
-            // //soc.SetSocketOption(SocketOptionLevel.Socket,
-            // //        SocketOptionName.ReceiveTimeout,10000);
-            // //log
-            // try
-            // {
-            //     Stream s = new NetworkStream(soc);
-            //     StreamReader sr = new StreamReader(s);
-            //     StreamWriter sw = new StreamWriter(s);
-            //     sw.AutoFlush = true; // enable automatic flushing
-            //     sw.WriteLine("service is available");
-            //     while (true)
-            //     {
-            //         string name = sr.ReadLine();
-            //         if (name == "" || name == null) break;
-            //         sw.WriteLine("message recieved" + name);
-            //     }
-            //     s.Close();
-            // }
-            // catch (Exception)
-            // {
-            //     //Log
-            // }
-            // //log
-            // soc.Close();
+        
         }
 
-        private static Dictionary<string, IndexItem> LoadMockupDic()
+        private void sendString(string strBlock)
         {
-            Dictionary<string, IndexItem> serverIndex = new Dictionary<string, IndexItem>();      
-            IndexItem item = new IndexItem();
-            string folder = @"./mock-data";
-            string file = folder + "/aText.txt";
-            item.Base = folder;
-            item.Path = file.Replace(folder, ".").Replace(@"\","/");
-            //item.FileHash = GetHash(folder, file);
-            item.IsChanged = false;
-            item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
-            //item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
-            item.UpdateTime = DateTime.Now;            
-            serverIndex.Add(item.Path,item);
-            item = new IndexItem();
-            file = folder + "/btest.doc";
-            item.Base = folder;
-            item.Path = file.Replace(folder, ".").Replace(@"\","/");
-            //item.FileHash = GetHash(folder, file);
-            item.IsChanged = false;
-            item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
-            //item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
-            item.UpdateTime = DateTime.Now;  
-            serverIndex.Add(item.Path,item);
             
+            var buf = Encoding.UTF8.GetBytes(strBlock);                            
             
-            return serverIndex;
+            tcp.GetStream().Write(BitConverter.GetBytes(buf.Length),0,4);
+            tcp.GetStream().Flush();
+            tcp.GetStream().Write(buf,0,buf.Length);
+            tcp.GetStream().Flush();            
         }
+
+        internal string WaitforCommand()
+        {
+            try
+            {                
+                while(tcp.Available==0 && timeout >=0 && this.IsConnected())
+                {
+                    timeout -= 500;
+                    Thread.Sleep(500);
+                    Debug.Print("HOHO I'm sleeping \n");
+                }
+                if(timeout<0 || !this.IsConnected())                                
+                {                    
+                    tcp.Close();
+                    return "";
+                }
+                var comStr = reader.ReadLine();
+                //reader.Close();
+                return comStr;                                             
+            }
+            catch (Exception ex)
+            {
+                tcp.Close();
+                return "";
+            }
+        }
+
+        internal void SendFileNameFowllowed()
+        {
+            var name = reader.ReadLine();
+            
+            // Buffer for reading data
+            Byte[] buf = File.ReadAllBytes(name);
+            tcp.GetStream().Write(BitConverter.GetBytes(buf.Length),0,4);
+            tcp.GetStream().Flush();
+            tcp.GetStream().Write(buf,0,buf.Length);
+            tcp.GetStream().Flush();            
+        }
+
+        public bool IsConnected()
+        {
+            try
+            {
+                return !(tcp.Client.Poll(50, SelectMode.SelectRead) && tcp.Available == 0);
+            }
+            catch (SocketException) 
+            { return false; }
+        }
+        
     }
 }

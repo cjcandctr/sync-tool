@@ -5,5 +5,5 @@
     "exclude_type": ["exe"],
     "server_address": "127.0.0.1",
     "server_port": 8001,
-    "user_ssl": false
+    "use_ssl": false
 }

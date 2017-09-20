@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
+using System.Text;
+using System.Threading;
 using Newtonsoft.Json;
 
 namespace sync_client
@@ -12,10 +14,12 @@ namespace sync_client
     {
         private static TcpClient client;        
         public static ConfigMan conf = null;
+        StreamWriter sw;
         public SocketConnector()
         {
             conf = new ConfigMan();
             client = new TcpClient(conf.ServerAddress, conf.ServerPort);
+            sw = new StreamWriter(client.GetStream());
         }
         ~SocketConnector()
         {
@@ -29,35 +33,73 @@ namespace sync_client
                     Debug.Print("close tcp client exception");
                 }
         }
-        internal void UpdateServerIndex(Dictionary<string, IndexItem> serverIndex)
+        internal Dictionary<string, IndexItem> GetServerIndex()
         {
             try
             {
-                Stream s = client.GetStream();
-                StreamReader sr = new StreamReader(s);
-                StreamWriter sw = new StreamWriter(s);
-                //sw.AutoFlush = true;
-                var serializedJson = sr.ReadToEnd();
-                var dic1 = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(serializedJson);    
-                // while (true)
-                // {
-                //     Console.Write("Name: ");
-                //     string name = Console.ReadLine();
-                //     sw.WriteLine(name);
-                //     if (name == "") break;
-                //     Console.WriteLine(sr.ReadLine());
-                // }
-                s.Close();
+                    
+                sw.WriteLine("get_server_index"); // TODO add enum in both server side and client side
+                sw.Flush();
+                var serializedJson = ReadString();
+                var dict = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(serializedJson);    
+                return dict;
             }
-            finally
-            {
-                // code in finally block is guranteed 
-                // to execute irrespective of 
-                // whether any exception occurs or does 
-                // not occur in the try block
-                client.Close();
+            catch(Exception ex)
+            {                
+                Debug.Print(ex.Message);
+                return null;
             }
         }
 
+        internal Dictionary<string, IndexItem> UpdateServerIndex()
+        {
+            try
+            {                    
+                sw.WriteLine("update_server_index"); // TODO add enum in both server side and client side
+                sw.Flush();
+                var serializedJson = ReadString();
+                var dict = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(serializedJson);    
+                return dict;
+            }
+            catch(Exception ex)
+            {                
+                Debug.Print(ex.Message);
+                return null;
+            }
+        }
+
+        private string ReadString()
+        {
+            var ns =client.GetStream();
+            int a = client.Available;
+            byte[] lenByte = new byte[4];
+            ns.Read(lenByte,0,4);
+            var len = BitConverter.ToInt32(lenByte,0);
+
+            byte[] buf = new byte[len];
+            ns.Read(buf,0,len);
+            var reslut = Encoding.UTF8.GetString(buf);
+            return reslut;
+        }
+
+        internal void DownloadTo(SyncItem item)
+        {
+            try
+            {                    
+                sw.WriteLine("request_server_file"); // TODO add enum in both server side and client side
+                sw.Flush();
+                byte[] lenByte = new byte[4];
+                client.GetStream().Read(lenByte,0,4);
+                var len = BitConverter.ToInt32(lenByte,0);
+                
+                byte[] buf = new byte[len];
+                client.GetStream().Read(buf,0,len);
+                item.Data=buf;                
+            }
+            catch(Exception ex)
+            {                
+                Debug.Print(ex.Message);                
+            }
+        }
     }
 }

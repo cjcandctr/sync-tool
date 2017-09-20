@@ -10,99 +10,40 @@ namespace sync_client
     public class FileScanner
     {
         Dictionary<string, IndexItem> localIndex = null;
-        Dictionary<string, IndexItem> serverIndex = null;
-        public static ConfigMan conf = null;
-        public FileScanner()
+
+        List<string> scanBase;
+        List<string> ignoredPath;
+         int sizeLimit;
+        public FileScanner(List<string> scanBase, List<string> ignoredPath, int sizeLimit)
         {
-            if(conf == null) conf = new ConfigMan();        
-        }
-
-        public Tuple<List<SyncItem>,List<SyncItem>> Scan()
-        {
-            localIndex = UpdateIndex(localIndex, conf.ScanBase, conf.IgnoredPath);
-            serverIndex = UpdateServerIndex();
-            return BuildSyncItem(localIndex, serverIndex);
-        }
-
-        private Tuple<List<SyncItem>,List<SyncItem>> BuildSyncItem(Dictionary<string, IndexItem> localIndex, Dictionary<string, IndexItem> serverIndex)
-        {
-            if(localIndex == null) throw new Exception("cannot build local file index");
-            if(serverIndex == null) throw new Exception("cannot reviceve remote file index");
-
-            List<SyncItem> syncsLocal = new List<SyncItem>();
-            List<SyncItem> syncsServer = new List<SyncItem>();
-            
-            //var notInServer = localIndex.Keys.Except(serverIndex.Keys);            
-            
-            foreach(var localPair in localIndex)
-            {       
-                if(serverIndex.ContainsKey(localPair.Key))         
-                {
-                    var localItem = localPair.Value;
-                    var serverItem = serverIndex.GetValueOrDefault(localPair.Key);
-
-                    //TODO Server delete the file
-                    if(localItem.IsChanged && !serverItem.IsChanged)
-                    {
-                        SyncItem si = new SyncItem(localItem);
-                        si.ChangeType = SyncChangeType.Update;
-                        syncsServer.Add(si);
-                    }
-                    if(!localItem.IsChanged && serverItem.IsChanged)
-                    {
-                        SyncItem si = new SyncItem(serverItem);
-                        si.ChangeType = SyncChangeType.Update;
-                        syncsLocal.Add(si);
-                    }
-                    if(localItem.IsChanged && serverItem.IsChanged)
-                    {
-                        SyncItem si = new SyncItem(serverItem);
-                        si.ChangeType = SyncChangeType.Conflict;
-                        syncsLocal.Add(si);
-                        si = new SyncItem(localItem);
-                        si.ChangeType = SyncChangeType.Conflict;
-                        syncsServer.Add(si);
-                    }
-                    //TODO local delete the file
-                }
-                else
-                {
-                    SyncItem si = new SyncItem(localPair.Value);
-                    si.ChangeType = SyncChangeType.Create;
-                    syncsServer.Add(si);
-                }                
-            }
-
-            var notInLocal = serverIndex.Keys.Except(localIndex.Keys);
-            foreach(var key in notInLocal)
+            this.scanBase = scanBase;
+            if(ignoredPath == null)
             {
-                SyncItem si = new SyncItem(serverIndex.GetValueOrDefault(key));
-                si.ChangeType = SyncChangeType.Create;
-                syncsLocal.Add(si);
-            }
-            return new Tuple<List<SyncItem>, List<SyncItem>>(syncsLocal,syncsServer);
-        }
-
-        private Dictionary<string, IndexItem> UpdateServerIndex()
-        {
-
-            //Mockup here:
-            SocketConnector conn = new SocketConnector();   
-            conn.UpdateServerIndex(serverIndex);
-            return serverIndex;
-            return MockServerIndex();
-            
-            if(serverIndex == null) 
+                this.ignoredPath = new List<string>();
+            } 
+            else
             {
-                // TODO get from server
-                serverIndex = new Dictionary<string, IndexItem>();                                
-            }            
-            return serverIndex;
+                this.ignoredPath = ignoredPath;
+            }
+            this.sizeLimit = sizeLimit;     
         }
 
-        private Dictionary<string, IndexItem> MockServerIndex()
+        internal FileScanner()
         {
-            serverIndex = new Dictionary<string, IndexItem>();      
+        }
+
+        public Dictionary<string, IndexItem> Scan()
+        {
+            localIndex = UpdateIndex(localIndex, scanBase, ignoredPath);
+            return localIndex;
+            
+        }
+
+        
+
+        public Dictionary<string, IndexItem> MockServerIndex()
+        {
+            var serverIndex = new Dictionary<string, IndexItem>();      
             IndexItem item = new IndexItem();
             string folder = @"C:\Temp\delete2";
             string file = folder + "/HAPSA Issues Log Files.zip";
@@ -128,6 +69,23 @@ namespace sync_client
             
             return serverIndex;
         }
+        public Dictionary<string, IndexItem> MockServerindexUpdate()
+        {
+            var updateIndex = new Dictionary<string, IndexItem>();      
+            IndexItem item = new IndexItem();
+            string folder = @"C:\Temp\delete2";
+            string file = folder + "/mmexport1505092189115.jpg";
+            item.Base = folder;
+            item.Path = file.Replace(folder, ".").Replace(@"\","/");
+            item.FileHash = GetHash(folder, file);
+            item.IsChanged = true;
+            item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
+            item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
+            item.UpdateTime = DateTime.Now;  
+            updateIndex.Add(item.Path,item);            
+            
+            return updateIndex;
+        }
 
         private Dictionary<string, IndexItem> UpdateIndex(Dictionary<string, IndexItem> index, List<string> scanBase, List<string> excludeFile)
         {
@@ -140,9 +98,9 @@ namespace sync_client
                 {                    
                     if(ExcludeFile(file)) continue;
                     Debug.Print(file + " \n" );
-                    if(index.ContainsKey(file.Replace(folder, "."))) 
+                    if(index.ContainsKey(file.Replace(@"\","/"))) 
                     {
-                        var item = index.GetValueOrDefault(file);
+                        var item = index.GetValueOrDefault(file.Replace(@"\","/"));
                         DateTime lastMod = File.GetLastWriteTime(file);
                         if (lastMod != item.UpdateTime)
                         {
@@ -153,13 +111,14 @@ namespace sync_client
                     {
                         IndexItem item = new IndexItem();
                         item.Base = folder;
+                        item.ServerBase = folder.Replace(":","");
                         item.Path = file.Replace(folder, ".").Replace(@"\","/");
                         item.FileHash = GetHash(folder, file);
                         item.IsChanged = false;
                         item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
                         item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
                         item.UpdateTime = DateTime.Now;
-                        index.Add(item.Path, item);
+                        index.Add(file.Replace(@"\","/"), item);
                     }                    
                 }
                 
@@ -169,14 +128,14 @@ namespace sync_client
 
         private bool ExcludeFile(string file)
         {            
-            if(!File.GetAttributes(file).HasFlag(FileAttributes.Directory))
+            if(!File.GetAttributes(file).HasFlag(FileAttributes.Directory) && sizeLimit>0)
             {
                 long size = new FileInfo(file).Length;
-                if (size > conf.SizeLimit * 1024 * 1024) return true;
+                if (size > sizeLimit * 1024 * 1024) return true;
             }
 
-            if(conf.IgnoredPath.Count ==0) return false;
-            foreach(var exc in conf.IgnoredPath)
+            if(ignoredPath.Count ==0) return false;
+            foreach(var exc in ignoredPath)
             {
                 if(string.IsNullOrEmpty(exc)) return false;                   
                 if(file.Replace(@"\","/").Contains(exc)) return true;                
@@ -212,5 +171,8 @@ namespace sync_client
             }
             
         }
+
+
+        
     }
 }
