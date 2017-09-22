@@ -25,9 +25,13 @@ namespace sync_client
 
     public enum CommandEnum 
     {
+        idle_timeout_command,
+        command_ack,
         get_server_index,
         update_server_index,
-        empty_command
+        request_server_file,
+        create_file
+        
     }
     
 }

@@ -9,11 +9,12 @@ namespace sync_client
 {
     public class FileScanner
     {
-        Dictionary<string, IndexItem> localIndex = null;
-
+        public Dictionary<string, IndexItem> FullIndex = new Dictionary<string, IndexItem>();
+        public Dictionary<string, IndexItem> UpdatedIndex = null;
         List<string> scanBase;
         List<string> ignoredPath;
-         int sizeLimit;
+        int sizeLimit;
+        public String ServerStorageBase = "";
         public FileScanner(List<string> scanBase, List<string> ignoredPath, int sizeLimit)
         {
             this.scanBase = scanBase;
@@ -25,6 +26,7 @@ namespace sync_client
             {
                 this.ignoredPath = ignoredPath;
             }
+            
             this.sizeLimit = sizeLimit;     
         }
 
@@ -34,8 +36,12 @@ namespace sync_client
 
         public Dictionary<string, IndexItem> Scan()
         {
-            localIndex = UpdateIndex(localIndex, scanBase, ignoredPath);
-            return localIndex;
+            if(!string.IsNullOrEmpty(ServerStorageBase))
+            {
+                scanBase.Add(ServerStorageBase);
+            }
+            UpdatedIndex = UpdateIndex(FullIndex, scanBase, ignoredPath);
+            return FullIndex;
             
         }
 
@@ -47,24 +53,24 @@ namespace sync_client
             IndexItem item = new IndexItem();
             string folder = @"C:\Temp\delete2";
             string file = folder + "/HAPSA Issues Log Files.zip";
-            item.Base = folder;
-            item.Path = file.Replace(folder, ".").Replace(@"\","/");
+            item.ClientScanBase = folder;
+            item.Name = file.Replace(folder, ".").Replace(@"\","/");
             item.FileHash = GetHash(folder, file);
             item.IsChanged = false;
             item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
             item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
             item.UpdateTime = DateTime.Now;            
-            serverIndex.Add(item.Path,item);
+            serverIndex.Add(item.Name,item);
             item = new IndexItem();
             file = folder + "/mmexport1505092189115.jpg";
-            item.Base = folder;
-            item.Path = file.Replace(folder, ".").Replace(@"\","/");
+            item.ClientScanBase = folder;
+            item.Name = file.Replace(folder, ".").Replace(@"\","/");
             item.FileHash = GetHash(folder, file);
             item.IsChanged = false;
             item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
             item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
             item.UpdateTime = DateTime.Now;  
-            serverIndex.Add(item.Path,item);
+            serverIndex.Add(item.Name,item);
             
             
             return serverIndex;
@@ -75,24 +81,23 @@ namespace sync_client
             IndexItem item = new IndexItem();
             string folder = @"C:\Temp\delete2";
             string file = folder + "/mmexport1505092189115.jpg";
-            item.Base = folder;
-            item.Path = file.Replace(folder, ".").Replace(@"\","/");
+            item.ClientScanBase = folder;
+            item.Name = file.Replace(folder, ".").Replace(@"\","/");
             item.FileHash = GetHash(folder, file);
             item.IsChanged = true;
             item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
             item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
             item.UpdateTime = DateTime.Now;  
-            updateIndex.Add(item.Path,item);            
+            updateIndex.Add(item.Name,item);            
             
             return updateIndex;
         }
 
         private Dictionary<string, IndexItem> UpdateIndex(Dictionary<string, IndexItem> index, List<string> scanBase, List<string> excludeFile)
-        {
-            
-            if(index == null) index = new Dictionary<string, IndexItem>();
+        {                        
             System.Threading.Tasks.Parallel.ForEach(scanBase, folder=>{
-                if(!Directory.Exists(folder)) return; 
+                if(!Directory.Exists(folder)) return;    
+                if (UpdatedIndex == null)  UpdatedIndex = new Dictionary<string, IndexItem>();
                 string[] files = Directory.GetFileSystemEntries(folder,"*.*" ,SearchOption.AllDirectories); 
                 foreach(string file in files)
                 {                    
@@ -104,26 +109,34 @@ namespace sync_client
                         DateTime lastMod = File.GetLastWriteTime(file);
                         if (lastMod != item.UpdateTime)
                         {
-                            item.IsChanged = true;                            
+                            item.IsChanged = true;
+                            UpdatedIndex.TryAdd(file.Replace(@"\","/"),item);                       
                         }
                     }
                     else
                     {
                         IndexItem item = new IndexItem();
-                        item.Base = folder;
-                        item.ServerBase = folder.Replace(":","");
-                        item.Path = file.Replace(folder, ".").Replace(@"\","/");
+                        item.ClientScanBase = folder;
+                        if(file.StartsWith('/'))
+                        {
+                            item.PathInServer= @"_root_/" +folder.Substring(1);
+                        }
+                        else
+                        {
+                            item.PathInServer = folder.Replace(":","");
+                        }
+                        item.Name = file.Replace(folder, ".").Replace(@"\","/");
                         item.FileHash = GetHash(folder, file);
                         item.IsChanged = false;
                         item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
                         item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
-                        item.UpdateTime = DateTime.Now;
-                        index.Add(file.Replace(@"\","/"), item);
+                        item.UpdateTime = File.GetLastWriteTime(file);
+                        if(!item.IsFolder) index.TryAdd(file.Replace(@"\","/"), item);
                     }                    
                 }
                 
             } );
-            return index;
+            return UpdatedIndex;
         }
 
         private bool ExcludeFile(string file)

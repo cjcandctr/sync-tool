@@ -7,14 +7,13 @@ namespace sync_server
     {
         public bool SSL {get; private set;}
         public int Port {get; private set;}
-        public List<string> StorageLocation {get; private set;}
+        public string StorageLocation {get; private set;}
         public string User {get; private set;}
         public string Pass {get; private set;}
         public int ConnectionLIMIT { get; internal set; }
 
         public ConfigManager()
-        {
-            StorageLocation = new List<string>();
+        {            
             ReadConfig();
         }
 
@@ -22,7 +21,7 @@ namespace sync_server
         {
             this.SSL = false;
             Port = 8001;
-            StorageLocation.Add("./mock-data");
+            StorageLocation ="./mock-data/";
             User = "admin";
             Pass = "admin";
             ConnectionLIMIT = 1;

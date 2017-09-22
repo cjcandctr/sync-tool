@@ -13,15 +13,13 @@ namespace sync_server
     public class SocketConnector
     {
         private TcpClient tcp;                
-        int timeout = 1 * 60 * 1000;
-        StreamReader reader;
-        StreamWriter writer;
+        int timeout = 5 * 60 * 1000;
+        NetworkStream nstream = null;
+        ConfigManager conf = new ConfigManager();
         public SocketConnector(TcpListener listener)
         {                    
             tcp = listener.AcceptTcpClient();
-            
-            reader = new StreamReader(tcp.GetStream());
-            writer = new StreamWriter(tcp.GetStream());
+            nstream = tcp.GetStream();
         }
         ~SocketConnector()
         {
@@ -44,36 +42,15 @@ namespace sync_server
             {
 
             }
-                        
-            //soc.SetSocketOption(SocketOptionLevel.Socket,
-            //        SocketOptionName.ReceiveTimeout,10000);
-            //log
             try
-            {                
-                
-
+            {                                
                 var strBlock = JsonConvert.SerializeObject(dic, Formatting.Indented);
-                sendString(strBlock);
-                
+                SendString(strBlock);                
             }
             catch (Exception ex)
             {
-                Debug.Print(ex.Message);
-                //Log
-            }
-            //log
-        
-        }
-
-        private void sendString(string strBlock)
-        {
-            
-            var buf = Encoding.UTF8.GetBytes(strBlock);                            
-            
-            tcp.GetStream().Write(BitConverter.GetBytes(buf.Length),0,4);
-            tcp.GetStream().Flush();
-            tcp.GetStream().Write(buf,0,buf.Length);
-            tcp.GetStream().Flush();            
+                Debug.Print(ex.Message);                
+            }            
         }
 
         internal string WaitforCommand()
@@ -84,15 +61,15 @@ namespace sync_server
                 {
                     timeout -= 500;
                     Thread.Sleep(500);
-                    Debug.Print("HOHO I'm sleeping \n");
+                    Debug.Print("HOHO I'm waiting for command. \n");
                 }
-                if(timeout<0 || !this.IsConnected())                                
+                if(timeout<0 || !this.IsConnected())                 
                 {                    
                     tcp.Close();
                     return "";
                 }
-                var comStr = reader.ReadLine();
-                //reader.Close();
+                var comStr = ReadString();                
+
                 return comStr;                                             
             }
             catch (Exception ex)
@@ -102,9 +79,42 @@ namespace sync_server
             }
         }
 
-        internal void SendFileNameFowllowed()
+
+        internal void ReveiveAndSave()
         {
-            var name = reader.ReadLine();
+            var name = ReadString();
+            name = conf.StorageLocation + name;
+            (new FileInfo(name)).Directory.Create();
+
+            var len = ReadTargetByteInStream();
+            
+
+            if(len>tcp.ReceiveBufferSize)
+            {
+                byte[] buf = new byte[tcp.ReceiveBufferSize];
+                using (var fs = new FileStream(name, FileMode.Create, FileAccess.Write))
+                {                                                                        
+                    do{
+                        nstream.Read(buf,0,tcp.ReceiveBufferSize);
+                    }while(nstream.DataAvailable);
+                    fs.Write(buf, 0, buf.Length);
+                }
+            }
+            else
+            {
+                byte[] buf = new byte[len];
+                nstream.Read(buf,0,len);
+                using (var fs = new FileStream(name, FileMode.Create, FileAccess.Write))
+                {                                                                                            
+                    fs.Write(buf, 0, buf.Length);
+                }
+            }
+                                    
+        }
+
+        internal void SendRequestFile()
+        {
+            var name = ReadString();
             
             // Buffer for reading data
             Byte[] buf = File.ReadAllBytes(name);
@@ -112,6 +122,40 @@ namespace sync_server
             tcp.GetStream().Flush();
             tcp.GetStream().Write(buf,0,buf.Length);
             tcp.GetStream().Flush();            
+        }
+
+        private string ReadString()
+        {            
+            var len = ReadTargetByteInStream();
+            byte[] buf = new byte[len];
+            nstream.Read(buf,0,len);
+            var reslut = Encoding.UTF8.GetString(buf);
+            return reslut;
+        }
+        private int ReadTargetByteInStream()
+        {
+            byte[] lenByte = new byte[4];
+            nstream.Read(lenByte,0,4);
+            var len = BitConverter.ToInt32(lenByte,0);
+            return len;
+        }
+
+        internal void SendString(string strBlock)
+        {
+            
+            var buf = Encoding.UTF8.GetBytes(strBlock);                            
+            
+            nstream.Write(BitConverter.GetBytes(buf.Length),0,4);
+            nstream.Flush();
+            nstream.Write(buf,0,buf.Length);
+            nstream.Flush();            
+        }
+        
+        internal void SendACK(string command)
+        {
+            var buf = Encoding.UTF8.GetBytes(command);            
+            nstream.Write(buf,0,buf.Length);
+            nstream.Flush();  
         }
 
         public bool IsConnected()

@@ -14,12 +14,12 @@ namespace sync_client
     {
         private static TcpClient client;        
         public static ConfigMan conf = null;
-        StreamWriter sw;
+        NetworkStream nstream = null;
         public SocketConnector()
         {
             conf = new ConfigMan();
             client = new TcpClient(conf.ServerAddress, conf.ServerPort);
-            sw = new StreamWriter(client.GetStream());
+            nstream = client.GetStream();
         }
         ~SocketConnector()
         {
@@ -37,10 +37,10 @@ namespace sync_client
         {
             try
             {
-                    
-                sw.WriteLine("get_server_index"); // TODO add enum in both server side and client side
-                sw.Flush();
+
+                SendString(CommandEnum.get_server_index.ToString());                    
                 var serializedJson = ReadString();
+                ReadACK(CommandEnum.get_server_index.ToString());
                 var dict = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(serializedJson);    
                 return dict;
             }
@@ -49,14 +49,45 @@ namespace sync_client
                 Debug.Print(ex.Message);
                 return null;
             }
+        }
+
+        private void SendString(string strBlock)
+        {            
+            var buf = Encoding.UTF8.GetBytes(strBlock);                                        
+            nstream.Write(BitConverter.GetBytes(buf.Length),0,4);
+            nstream.Flush();
+            nstream.Write(buf,0,buf.Length);
+            nstream.Flush();            
+        }
+        
+        private string ReadString()
+        {            
+            var len = ReadTargetByteInStream();
+            byte[] buf = new byte[len];
+            nstream.Read(buf,0,len);
+            var reslut = Encoding.UTF8.GetString(buf);
+            return reslut;
+        }
+
+        internal bool ReadACK(string command)
+        {
+            var buf = new byte[Encoding.UTF8.GetByteCount(command)];
+            nstream.Read(buf,0,buf.Length);
+            return command == Encoding.UTF8.GetString(buf);
+        }        
+        private int ReadTargetByteInStream()
+        {
+            byte[] lenByte = new byte[4];
+            nstream.Read(lenByte,0,4);
+            var len = BitConverter.ToInt32(lenByte,0);
+            return len;
         }
 
         internal Dictionary<string, IndexItem> UpdateServerIndex()
         {
             try
             {                    
-                sw.WriteLine("update_server_index"); // TODO add enum in both server side and client side
-                sw.Flush();
+                SendString(CommandEnum.update_server_index.ToString()); 
                 var serializedJson = ReadString();
                 var dict = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(serializedJson);    
                 return dict;
@@ -68,33 +99,36 @@ namespace sync_client
             }
         }
 
-        private string ReadString()
-        {
-            var ns =client.GetStream();
-            int a = client.Available;
-            byte[] lenByte = new byte[4];
-            ns.Read(lenByte,0,4);
-            var len = BitConverter.ToInt32(lenByte,0);
-
-            byte[] buf = new byte[len];
-            ns.Read(buf,0,len);
-            var reslut = Encoding.UTF8.GetString(buf);
-            return reslut;
-        }
 
         internal void DownloadTo(SyncItem item)
         {
             try
             {                    
-                sw.WriteLine("request_server_file"); // TODO add enum in both server side and client side
-                sw.Flush();
-                byte[] lenByte = new byte[4];
-                client.GetStream().Read(lenByte,0,4);
-                var len = BitConverter.ToInt32(lenByte,0);
+                SendString(CommandEnum.request_server_file.ToString());
+                
+                int len = ReadTargetByteInStream();
                 
                 byte[] buf = new byte[len];
-                client.GetStream().Read(buf,0,len);
+                nstream.Read(buf,0,len);
                 item.Data=buf;                
+            }
+            catch(Exception ex)
+            {                
+                Debug.Print(ex.Message);                
+            }
+        }
+
+        internal void Upload(SyncItem item)
+        {
+            try
+            {
+                SendString(CommandEnum.create_file.ToString()); 
+                
+                SendString(item.IndexItem.PathInServer + item.IndexItem.Name.Substring(1));                 
+                nstream.Write(BitConverter.GetBytes(item.Data.Length),0,4);
+                nstream.Write(item.Data,0,item.Data.Length); 
+                nstream.Flush(); 
+                ReadACK(CommandEnum.create_file.ToString());
             }
             catch(Exception ex)
             {                

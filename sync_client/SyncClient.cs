@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace sync_client
@@ -27,7 +28,7 @@ namespace sync_client
             if(conn == null) conn = new SocketConnector(); 
             if(serverIndex == null) 
             {                
-                serverIndex = conn.GetServerIndex();    
+                serverIndex = conn.GetServerIndex();                
                 return serverIndex;        
             }
             
@@ -128,11 +129,21 @@ namespace sync_client
 
         private void CreateServerFile(SyncItem item)
         {
-            throw new NotImplementedException();
+            if(item.IndexItem.IsFolder && item.IndexItem.IsEmpty) 
+            {
+                //conn.CreateFolder();
+            }
+            else
+            {
+                var name = item.IndexItem.ClientScanBase + item.IndexItem.Name.Substring(1);            
+                item.Data = File.ReadAllBytes(name);
+                conn.Upload(item);                
+            }
         }
 
         private async void SyncLocal(List<SyncItem> syncItems)
         {
+            return;
             if (syncItems.Count<=0) return ;
             foreach(var item in syncItems)
             {
@@ -154,7 +165,7 @@ namespace sync_client
 
         private void CreateFile(SyncItem item)
         {
-            conn.DownloadTo(item);
+            //conn.DownloadTo(item);
 
         }
     }

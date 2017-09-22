@@ -21,7 +21,10 @@ namespace sync_server
 
         public void StartServer()
         {            
-            fc = new FileScanner(Conf.StorageLocation, null, 0);
+            List<string> scanbase = new List<string>();
+            scanbase.Add("");
+            fc = new FileScanner(scanbase, null, 0);
+            fc.ServerStorageBase = Conf.StorageLocation;
             fc.Scan();
             Debug.Print("HOHO: server file index setup");
             StartListener();
@@ -61,6 +64,9 @@ namespace sync_server
                     case CommandEnum.request_server_file:
                         SendRequestFile(socon);
                         break;
+                    case CommandEnum.create_file:
+                        ReveiveAndSave(socon);
+                        break;
                     default:
                         break;
                 }
@@ -73,15 +79,22 @@ namespace sync_server
             }
         }
 
+        private void ReveiveAndSave(SocketConnector socon)
+        {
+            socon.ReveiveAndSave();
+            socon.SendACK(CommandEnum.create_file.ToString());
+        }
+
         private void SendRequestFile(SocketConnector socon)
         {
-            socon.GetRequestFileName();            
+            socon.SendRequestFile();            
         }
 
         private void SendFullIndex(SocketConnector socon)
         {
             var index = fc.Scan();
             socon.SendFullIndex(index);
+            socon.SendACK(CommandEnum.get_server_index.ToString());
         }
 
         public static string Base64Encode(string plainText)
@@ -103,24 +116,24 @@ namespace sync_server
             IndexItem item = new IndexItem();
             string folder = @"./mock-data";
             string file = folder + "/aText.txt";
-            item.Base = folder;
-            item.Path = file.Replace(folder, ".").Replace(@"\","/");
+            item.ClientScanBase = folder;
+            item.Name = file.Replace(folder, ".").Replace(@"\","/");
             //item.FileHash = GetHash(folder, file);
             item.IsChanged = false;
             item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
             //item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
             item.UpdateTime = DateTime.Now;            
-            serverIndex.Add(item.Path,item);
+            serverIndex.Add(item.Name,item);
             item = new IndexItem();
             file = folder + "/btest.doc";
-            item.Base = folder;
-            item.Path = file.Replace(folder, ".").Replace(@"\","/");
+            item.ClientScanBase = folder;
+            item.Name = file.Replace(folder, ".").Replace(@"\","/");
             //item.FileHash = GetHash(folder, file);
             item.IsChanged = false;
             item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
             //item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
             item.UpdateTime = DateTime.Now;  
-            serverIndex.Add(item.Path,item);
+            serverIndex.Add(item.Name,item);
             
             
             return serverIndex;
