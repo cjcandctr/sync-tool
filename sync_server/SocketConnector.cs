@@ -20,6 +20,7 @@ namespace sync_server
         {                    
             tcp = listener.AcceptTcpClient();
             nstream = tcp.GetStream();
+            nstream.ReadTimeout = 500;
         }
         ~SocketConnector()
         {
@@ -83,33 +84,27 @@ namespace sync_server
         internal void ReveiveAndSave()
         {
             var name = ReadString();
-            name = conf.StorageLocation + name;
-            (new FileInfo(name)).Directory.Create();
+            byte[] lenByte = new byte[4];
+            nstream.Read(lenByte,0,4);
+            var len = BitConverter.ToInt32(lenByte,0);
+            byte[] buf = new byte[len];
 
-            var len = ReadTargetByteInStream();
-            
 
             if(len>tcp.ReceiveBufferSize)
             {
-                byte[] buf = new byte[tcp.ReceiveBufferSize];
-                using (var fs = new FileStream(name, FileMode.Create, FileAccess.Write))
-                {                                                                        
-                    do{
-                        nstream.Read(buf,0,tcp.ReceiveBufferSize);
-                    }while(nstream.DataAvailable);
-                    fs.Write(buf, 0, buf.Length);
-                }
+                do{
+                    nstream.Read(buf,0,tcp.ReceiveBufferSize);
+                    
+                }while(tcp.Available>0);
             }
             else
             {
-                byte[] buf = new byte[len];
                 nstream.Read(buf,0,len);
-                using (var fs = new FileStream(name, FileMode.Create, FileAccess.Write))
-                {                                                                                            
-                    fs.Write(buf, 0, buf.Length);
-                }
             }
-                                    
+            name = conf.StorageLocation + name;
+            (new FileInfo(name)).Directory.Create();
+            File.WriteAllBytes(name, buf);
+            
         }
 
         internal void SendRequestFile()

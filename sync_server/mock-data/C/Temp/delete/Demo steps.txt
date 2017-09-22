@@ -1,0 +1,7 @@
+MGM request this feature as they found some players are doing the count manually by themselves for some reason.
+
+Steps to do the demo
+1. please log on to the sbx UI, and open media manager -> content -> choose patron plugin, then choose gameplay, right click,  ¡°set it as default¡±.
+2. open "manager media displays", choose the displays for egms, and reload media display.
+3. card in egms. 
+4. you can see a 'session game play', bet on the egms, the number of your bet will be updated instantly.

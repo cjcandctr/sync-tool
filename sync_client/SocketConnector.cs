@@ -126,8 +126,23 @@ namespace sync_client
                 
                 SendString(item.IndexItem.PathInServer + item.IndexItem.Name.Substring(1));                 
                 nstream.Write(BitConverter.GetBytes(item.Data.Length),0,4);
-                nstream.Write(item.Data,0,item.Data.Length); 
-                nstream.Flush(); 
+                
+                if(item.Data.Length > client.SendBufferSize)
+                {
+                    int start = 0;
+                    int left = item.Data.Length;
+                    int size = left - client.SendBufferSize>0 ? client.SendBufferSize: left;
+                    do
+                    {
+                        nstream.Write(item.Data,start,size);
+                        nstream.Flush();
+                    } while(left>0);
+                }
+                else
+                {
+                    nstream.Write(item.Data,0,item.Data.Length);                 
+                    nstream.Flush(); 
+                }
                 ReadACK(CommandEnum.create_file.ToString());
             }
             catch(Exception ex)
