@@ -64,7 +64,18 @@ namespace sync_client
         {            
             var len = ReadTargetByteInStream();
             byte[] buf = new byte[len];
-            nstream.Read(buf,0,len);
+            var total = 0;      
+            var left = len;      
+            
+            while(total < len)
+            {                                
+                var size = Math.Min(left, tcp.ReceiveBufferSize);
+                var received = nstream.Read(buf,total,size);
+                total += received;
+                left -= received;                
+            }
+
+            //nstream.Read(buf,0,len);
             var reslut = Encoding.UTF8.GetString(buf);
             return reslut;
         }
@@ -105,10 +116,19 @@ namespace sync_client
             try
             {                    
                 SendString(CommandEnum.request_server_file.ToString());
-                
-                int len = ReadTargetByteInStream();
-                
+                SendString(item.);
+                int len = ReadTargetByteInStream();                
                 byte[] buf = new byte[len];
+                var total = 0;      
+                var left = len;      
+                
+                while(total < len)
+                {                                
+                    var size = Math.Min(left, client.ReceiveBufferSize);
+                    var received = nstream.Read(buf,total,size);
+                    total += received;
+                    left -= received;                
+                }
                 nstream.Read(buf,0,len);
                 item.Data=buf;                
             }
@@ -127,22 +147,8 @@ namespace sync_client
                 SendString(item.IndexItem.PathInServer + item.IndexItem.Name.Substring(1));                 
                 nstream.Write(BitConverter.GetBytes(item.Data.Length),0,4);
                 
-                if(item.Data.Length > client.SendBufferSize)
-                {
-                    int start = 0;
-                    int left = item.Data.Length;
-                    int size = left - client.SendBufferSize>0 ? client.SendBufferSize: left;
-                    do
-                    {
-                        nstream.Write(item.Data,start,size);
-                        nstream.Flush();
-                    } while(left>0);
-                }
-                else
-                {
-                    nstream.Write(item.Data,0,item.Data.Length);                 
-                    nstream.Flush(); 
-                }
+                nstream.Write(item.Data,0,item.Data.Length);
+                nstream.Flush();
                 ReadACK(CommandEnum.create_file.ToString());
             }
             catch(Exception ex)

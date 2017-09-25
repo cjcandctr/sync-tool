@@ -20,7 +20,7 @@ namespace sync_server
         {                    
             tcp = listener.AcceptTcpClient();
             nstream = tcp.GetStream();
-            nstream.ReadTimeout = 500;
+            nstream.ReadTimeout = 30000;
         }
         ~SocketConnector()
         {
@@ -84,23 +84,19 @@ namespace sync_server
         internal void ReveiveAndSave()
         {
             var name = ReadString();
-            byte[] lenByte = new byte[4];
-            nstream.Read(lenByte,0,4);
-            var len = BitConverter.ToInt32(lenByte,0);
+            var len = ReadTargetByteInStream();           
             byte[] buf = new byte[len];
-
-
-            if(len>tcp.ReceiveBufferSize)
-            {
-                do{
-                    nstream.Read(buf,0,tcp.ReceiveBufferSize);
-                    
-                }while(tcp.Available>0);
+            var total = 0;      
+            var left = len;      
+            
+            while(total < len)
+            {                                
+                var size = Math.Min(left, tcp.ReceiveBufferSize);
+                var received = nstream.Read(buf,total,size);
+                total += received;
+                left -= received;                
             }
-            else
-            {
-                nstream.Read(buf,0,len);
-            }
+            
             name = conf.StorageLocation + name;
             (new FileInfo(name)).Directory.Create();
             File.WriteAllBytes(name, buf);
@@ -123,7 +119,18 @@ namespace sync_server
         {            
             var len = ReadTargetByteInStream();
             byte[] buf = new byte[len];
-            nstream.Read(buf,0,len);
+            var total = 0;      
+            var left = len;      
+            
+            while(total < len)
+            {                                
+                var size = Math.Min(left, tcp.ReceiveBufferSize);
+                var received = nstream.Read(buf,total,size);
+                total += received;
+                left -= received;                
+            }
+
+            //nstream.Read(buf,0,len);
             var reslut = Encoding.UTF8.GetString(buf);
             return reslut;
         }
