@@ -32,24 +32,7 @@ namespace sync_client
                 {
                     Debug.Print("close tcp client exception");
                 }
-        }
-        internal Dictionary<string, IndexItem> GetServerIndex()
-        {
-            try
-            {
-
-                SendString(CommandEnum.get_server_index.ToString());                    
-                var serializedJson = ReadString();
-                ReadACK(CommandEnum.get_server_index.ToString());
-                var dict = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(serializedJson);    
-                return dict;
-            }
-            catch(Exception ex)
-            {                
-                Debug.Print(ex.Message);
-                return null;
-            }
-        }
+        }        
 
         private void SendString(string strBlock)
         {            
@@ -69,7 +52,7 @@ namespace sync_client
             
             while(total < len)
             {                                
-                var size = Math.Min(left, tcp.ReceiveBufferSize);
+                var size = Math.Min(left, client.ReceiveBufferSize);
                 var received = nstream.Read(buf,total,size);
                 total += received;
                 left -= received;                
@@ -94,12 +77,15 @@ namespace sync_client
             return len;
         }
 
-        internal Dictionary<string, IndexItem> UpdateServerIndex()
+        #region Commands
+        internal Dictionary<string, IndexItem> GetServerIndex()
         {
             try
-            {                    
-                SendString(CommandEnum.update_server_index.ToString()); 
+            {
+
+                SendString(CommandEnum.get_server_index.ToString());                    
                 var serializedJson = ReadString();
+                ReadACK(CommandEnum.get_server_index.ToString());
                 var dict = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(serializedJson);    
                 return dict;
             }
@@ -109,14 +95,29 @@ namespace sync_client
                 return null;
             }
         }
-
+        internal Dictionary<string, IndexItem> UpdateServerIndex()
+        {
+            try
+            {                    
+                SendString(CommandEnum.get_index_update.ToString()); 
+                var serializedJson = ReadString();
+                var dict = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(serializedJson);    
+                ReadACK(CommandEnum.get_index_update.ToString());
+                return dict;
+            }
+            catch(Exception ex)
+            {                
+                Debug.Print(ex.Message);
+                return null;
+            }
+        }
 
         internal void DownloadTo(SyncItem item)
         {
             try
             {                    
                 SendString(CommandEnum.request_server_file.ToString());
-                SendString(item.);
+                SendString(item.IndexItem.PathInServer + item.IndexItem.Name);
                 int len = ReadTargetByteInStream();                
                 byte[] buf = new byte[len];
                 var total = 0;      
@@ -129,8 +130,9 @@ namespace sync_client
                     total += received;
                     left -= received;                
                 }
-                nstream.Read(buf,0,len);
-                item.Data=buf;                
+                //nstream.Read(buf,0,len);
+                item.Data=buf;  
+                ReadACK(CommandEnum.request_server_file.ToString());
             }
             catch(Exception ex)
             {                
@@ -144,7 +146,7 @@ namespace sync_client
             {
                 SendString(CommandEnum.create_file.ToString()); 
                 
-                SendString(item.IndexItem.PathInServer + item.IndexItem.Name.Substring(1));                 
+                SendString(item.IndexItem.PathInServer + item.IndexItem.Name);                 
                 nstream.Write(BitConverter.GetBytes(item.Data.Length),0,4);
                 
                 nstream.Write(item.Data,0,item.Data.Length);
@@ -156,5 +158,6 @@ namespace sync_client
                 Debug.Print(ex.Message);                
             }
         }
+        #endregion 
     }
 }

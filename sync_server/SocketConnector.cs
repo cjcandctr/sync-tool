@@ -34,8 +34,9 @@ namespace sync_server
                     Debug.Print("close tcp client exception");
                 }
         }
+        
 
-        internal void SendFullIndex(Dictionary<string, IndexItem> dic)
+        internal void SendIndexDict(Dictionary<string, IndexItem> dic)
         {                                    
             //var json = JsonConvert.SerializeObject(dic, Formatting.Indented);
             //var dic1 = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(json1);    
@@ -102,6 +103,7 @@ namespace sync_server
             File.WriteAllBytes(name, buf);
             
         }
+        
 
         internal void SendRequestFile()
         {

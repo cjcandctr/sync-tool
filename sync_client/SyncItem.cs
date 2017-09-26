@@ -28,7 +28,7 @@ namespace sync_client
         idle_timeout_command,
         command_ack,
         get_server_index,
-        update_server_index,
+        get_index_update,
         request_server_file,
         create_file
         

@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Threading;
 
 using System.Collections.Generic;
+using System.Linq;
 using sync_client;
 using System.Diagnostics;
 
@@ -22,7 +23,7 @@ namespace sync_server
         public void StartServer()
         {            
             List<string> scanbase = new List<string>();
-            scanbase.Add("");
+            scanbase.Add(Conf.StorageLocation);
             fc = new FileScanner(scanbase, null, 0);
             fc.ServerStorageBase = Conf.StorageLocation;
             fc.Scan();
@@ -61,6 +62,9 @@ namespace sync_server
                     case CommandEnum.get_server_index:
                         SendFullIndex(socon);
                         break;
+                    case CommandEnum.get_index_update:
+                        SendIndexUpdate(socon);
+                        break;
                     case CommandEnum.request_server_file:
                         SendRequestFile(socon);
                         break;
@@ -79,6 +83,13 @@ namespace sync_server
             }
         }
 
+        private void SendIndexUpdate(SocketConnector socon)
+        {
+            fc.Scan();            
+            socon.SendIndexDict(fc.UpdatedIndex);            
+            socon.SendACK(CommandEnum.get_index_update.ToString());
+        }
+
         private void ReveiveAndSave(SocketConnector socon)
         {
             socon.ReveiveAndSave();
@@ -87,15 +98,24 @@ namespace sync_server
 
         private void SendRequestFile(SocketConnector socon)
         {
-            socon.SendRequestFile();            
+            socon.SendRequestFile();   
+            socon.SendACK(CommandEnum.request_server_file.ToString());         
         }
 
         private void SendFullIndex(SocketConnector socon)
         {
             var index = fc.Scan();
-            socon.SendFullIndex(index);
+            
+            socon.SendIndexDict(index);
             socon.SendACK(CommandEnum.get_server_index.ToString());
         }
+
+        // public static void UpdateKey<TKey, TValue>(this IDictionary<TKey, TValue> dic, TKey fromKey, TKey toKey)
+        // {
+        //     TValue value = dic[fromKey];
+        //     dic.Remove(fromKey);
+        //     dic[toKey] = value;
+        // }
 
         public static string Base64Encode(string plainText)
         {

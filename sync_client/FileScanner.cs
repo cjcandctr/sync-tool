@@ -12,7 +12,7 @@ namespace sync_client
         public Dictionary<string, IndexItem> FullIndex = new Dictionary<string, IndexItem>();
         public Dictionary<string, IndexItem> UpdatedIndex = null;
         List<string> scanBase;
-        List<string> ignoredPath;
+        List<string> ignoredPath;        
         int sizeLimit;
         public String ServerStorageBase = "";
         public FileScanner(List<string> scanBase, List<string> ignoredPath, int sizeLimit)
@@ -36,10 +36,7 @@ namespace sync_client
 
         public Dictionary<string, IndexItem> Scan()
         {
-            if(!string.IsNullOrEmpty(ServerStorageBase))
-            {
-                scanBase.Add(ServerStorageBase);
-            }
+            
             UpdatedIndex = UpdateIndex(FullIndex, scanBase, ignoredPath);
             return FullIndex;
             
@@ -97,20 +94,37 @@ namespace sync_client
         {                        
             System.Threading.Tasks.Parallel.ForEach(scanBase, folder=>{
                 if(!Directory.Exists(folder)) return;    
-                if (UpdatedIndex == null)  UpdatedIndex = new Dictionary<string, IndexItem>();
+                UpdatedIndex = new Dictionary<string, IndexItem>();
                 string[] files = Directory.GetFileSystemEntries(folder,"*.*" ,SearchOption.AllDirectories); 
                 foreach(string file in files)
                 {                    
                     if(ExcludeFile(file)) continue;
+                    if(File.GetAttributes(file).HasFlag(FileAttributes.Directory)) continue;
                     Debug.Print(file + " \n" );
-                    if(index.ContainsKey(file.Replace(@"\","/"))) 
+                    var unifiledPath = file.Replace(@"\","/");
+                    var key = unifiledPath;
+                    if(!string.IsNullOrEmpty(ServerStorageBase)) //server scan logic
+                    {                        
+                        key = unifiledPath.Replace(ServerStorageBase, "");
+                        if(key.StartsWith(@"_root_/"))
+                        {
+                            key.Replace(@"_root_/", "/");
+                        }
+                        else
+                        { 
+                            key = key.Insert(1,":");                            
+                        }
+                    }
+                    
+                    if(index.ContainsKey(key)) 
                     {
-                        var item = index.GetValueOrDefault(file.Replace(@"\","/"));
+                        var item = index.GetValueOrDefault(key);
                         DateTime lastMod = File.GetLastWriteTime(file);
                         if (lastMod != item.UpdateTime)
                         {
                             item.IsChanged = true;
-                            UpdatedIndex.TryAdd(file.Replace(@"\","/"),item);                       
+                            UpdatedIndex.TryAdd(key,item);                       
+                            item.UpdateTime = lastMod;
                         }
                     }
                     else
@@ -125,13 +139,17 @@ namespace sync_client
                         {
                             item.PathInServer = folder.Replace(":","");
                         }
-                        item.Name = file.Replace(folder, ".").Replace(@"\","/");
+                        item.RealPath = file;
+                        item.Name = unifiledPath.Replace(folder, "");
                         item.FileHash = GetHash(folder, file);
                         item.IsChanged = false;
                         item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
                         item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
                         item.UpdateTime = File.GetLastWriteTime(file);
-                        if(!item.IsFolder) index.TryAdd(file.Replace(@"\","/"), item);
+                        if(!item.IsFolder) 
+                        {
+                            index.TryAdd(key, item);                            
+                        }
                     }                    
                 }
                 
