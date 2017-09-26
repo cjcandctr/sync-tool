@@ -176,7 +176,16 @@ namespace sync_client
         private void CreateFile(SyncItem item)
         {
             conn.DownloadTo(item);
-            var name = item.IndexItem.Name.Insert(1,":");
+            var name = "";
+            if(item.IndexItem.Name.StartsWith(@"_root_"))
+            {
+                name = item.IndexItem.Name.Replace(@"_root_", "");
+            }
+            else 
+            {
+                name = item.IndexItem.Name.Insert(1,":");
+            }
+
             (new FileInfo(name)).Directory.Create();
             File.WriteAllBytes(name, item.Data);
         }

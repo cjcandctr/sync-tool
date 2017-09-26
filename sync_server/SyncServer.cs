@@ -92,7 +92,25 @@ namespace sync_server
 
         private void ReveiveAndSave(SocketConnector socon)
         {
-            socon.ReveiveAndSave();
+            string name = socon.ReveiveAndSave();
+            Debug.Print(name + " \n" );            
+                                                
+            var key = name.Replace(Conf.StorageLocation, "");
+            if(key.StartsWith(@"_root_/"))
+            {
+                key = key.Replace(@"_root_/", "/");
+            }
+            else
+            { 
+                key = key.Insert(1,":");                            
+            }
+            if(fc.FullIndex.ContainsKey(key))
+            {
+                var item = fc.FullIndex.GetValueOrDefault(key);
+                //TODO method to ensure
+                
+            }
+
             socon.SendACK(CommandEnum.create_file.ToString());
         }
 

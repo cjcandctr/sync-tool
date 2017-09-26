@@ -82,7 +82,7 @@ namespace sync_server
         }
 
 
-        internal void ReveiveAndSave()
+        internal string ReveiveAndSave()
         {
             var name = ReadString();
             var len = ReadTargetByteInStream();           
@@ -101,7 +101,7 @@ namespace sync_server
             name = conf.StorageLocation + name;
             (new FileInfo(name)).Directory.Create();
             File.WriteAllBytes(name, buf);
-            
+            return name;
         }
         
 

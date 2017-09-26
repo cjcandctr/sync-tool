@@ -108,7 +108,7 @@ namespace sync_client
                         key = unifiledPath.Replace(ServerStorageBase, "");
                         if(key.StartsWith(@"_root_/"))
                         {
-                            key.Replace(@"_root_/", "/");
+                            key = key.Replace(@"_root_/", "/");
                         }
                         else
                         { 
