@@ -1,10 +1,11 @@
 {
     "scan_base": ["/home/leon/test1", "C:/Temp/delete"],
     "ignored_path": ["C:/Temp/delete/PropertyInfo_dev_20170707.5", "C:/Temp/delete/weichapic", "C:/Temp/delete2/HAPSA Issues Log Files"],
+    "system_root_map": "",
     "size_limit_MB": 8,
     "interval_second": 30,
     "exclude_type": ["exe"],
     "server_address": "127.0.0.1",
-    "server_port": 8001,
+    "server_port": 8080,
     "use_ssl": false
 }

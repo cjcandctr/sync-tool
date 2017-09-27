@@ -218,11 +218,17 @@ namespace sync_client
             var name = "";
             if(item.IndexItem.Name.StartsWith(@"_root_"))
             {
-                name = item.IndexItem.Name.Replace(@"_root_", "");
+                if(Program.IsLinux)
+                    name = item.IndexItem.Name.Replace(@"_root_", "");
+                else if(Program.IsWindows)
+                    name = item.IndexItem.Name.Replace(@"_root_", "c:");
             }
             else 
             {
-                name = item.IndexItem.Name.Insert(1,":");
+                if(Program.IsLinux)
+                    name = item.IndexItem.Name.Insert(0,"/");
+                else if(Program.IsWindows)
+                    name = item.IndexItem.Name.Insert(1,":");
             }
 
             (new FileInfo(name)).Directory.Create();

@@ -10,6 +10,8 @@ namespace sync_client
 {
     class Program
     {
+        public static bool IsWindows = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows);
+        public static bool IsLinux = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux);
         public static readonly log4net.ILog logger = log4net.LogManager.GetLogger(typeof(Program));
         static void Main(string[] args)
         {
