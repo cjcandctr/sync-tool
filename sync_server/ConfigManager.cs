@@ -29,7 +29,7 @@ namespace sync_server
             ConnectionLIMIT = 1;
             try 
             {
-                JObject jso = JObject.Parse(System.IO.File.ReadAllText(@"./clientConfig.json"));
+                JObject jso = JObject.Parse(System.IO.File.ReadAllText(@"./appsettings.json"));
 
                 SSL = jso["ssl"].ToObject<bool>();
                 Port = jso["port"].ToObject<int>();
