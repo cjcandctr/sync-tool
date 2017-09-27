@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
 using sync_client;
-//??? 一模一样的类 在客户端和服务端写两遍, 使用Binary序列化的结果会不会一样? 猜测是一样的...
+
 namespace sync_server
 {
     public class SocketConnector
@@ -29,17 +29,15 @@ namespace sync_server
                 {
                     tcp.Close();
                 }
-                catch(Exception)
+                catch(Exception ex)
                 {
-                    Debug.Print("close tcp client exception");
+                    Program.logger.Error("close tcp connection exception when shuttdown");
                 }
         }
         
 
         internal void SendIndexDict(Dictionary<string, IndexItem> dic)
         {                                    
-            //var json = JsonConvert.SerializeObject(dic, Formatting.Indented);
-            //var dic1 = JsonConvert.DeserializeObject<Dictionary<string, IndexItem> >(json1);    
             if(dic == null || dic.Count == 0)
             {
 
@@ -51,7 +49,7 @@ namespace sync_server
             }
             catch (Exception ex)
             {
-                Debug.Print(ex.Message);                
+                Program.logger.Warn("SendIndexDict", ex);                
             }            
         }
 
@@ -59,11 +57,11 @@ namespace sync_server
         {
             try
             {                
+                Program.logger.Info("HOHO I'm waiting for command.");
                 while(tcp.Available==0 && timeout >=0 && this.IsConnected())
                 {
                     timeout -= 500;
-                    Thread.Sleep(500);
-                    Debug.Print("HOHO I'm waiting for command. \n");
+                    Thread.Sleep(500);                    
                 }
                 if(timeout<0 || !this.IsConnected())                 
                 {                    
@@ -76,6 +74,7 @@ namespace sync_server
             }
             catch (Exception ex)
             {
+                Program.logger.Warn("WaitforCommand Error", ex);
                 tcp.Close();
                 return "";
             }

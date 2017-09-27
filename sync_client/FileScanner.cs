@@ -7,6 +7,8 @@ using System.Linq;
 
 namespace sync_client
 {
+    //TODO use FileSystemWatcher to listen file change
+    //TODO Serialize index
     public class FileScanner
     {
         public Dictionary<string, IndexItem> FullIndex = new Dictionary<string, IndexItem>();
@@ -37,12 +39,10 @@ namespace sync_client
         public Dictionary<string, IndexItem> Scan()
         {
             
-            UpdatedIndex = UpdateIndex(FullIndex, scanBase, ignoredPath);
+            UpdatedIndex = UpdateIndex(FullIndex, scanBase, ignoredPath);            
             return FullIndex;
             
         }
-
-        
 
         public Dictionary<string, IndexItem> MockServerIndex()
         {
@@ -92,6 +92,7 @@ namespace sync_client
 
         private Dictionary<string, IndexItem> UpdateIndex(Dictionary<string, IndexItem> index, List<string> scanBase, List<string> excludeFile)
         {                        
+            Program.logger.Info("Scanning local file");
             System.Threading.Tasks.Parallel.ForEach(scanBase, folder=>{
                 if(!Directory.Exists(folder)) return;    
                 UpdatedIndex = new Dictionary<string, IndexItem>();
@@ -100,7 +101,6 @@ namespace sync_client
                 {                    
                     if(ExcludeFile(file)) continue;
                     if(File.GetAttributes(file).HasFlag(FileAttributes.Directory)) continue;
-                    Debug.Print(file + " \n" );
                     var unifiledPath = file.Replace(@"\","/");
                     var key = unifiledPath;
                     if(!string.IsNullOrEmpty(ServerStorageBase)) //server scan logic
@@ -120,11 +120,13 @@ namespace sync_client
                     {
                         var item = index.GetValueOrDefault(key);
                         DateTime lastMod = File.GetLastWriteTime(file);
-                        if (lastMod != item.UpdateTime)
+                        var hash = GetHash("", file);
+                        if (hash != item.FileHash)
                         {
                             item.IsChanged = true;
                             UpdatedIndex.TryAdd(key,item);                       
                             item.UpdateTime = lastMod;
+                            item.FileHash = hash;
                         }
                     }
                     else
@@ -146,10 +148,10 @@ namespace sync_client
                         item.IsFolder = File.GetAttributes(file).HasFlag(FileAttributes.Directory);
                         item.IsEmpty = item.IsFolder && IsDirectoryEmpty(file);
                         item.UpdateTime = File.GetLastWriteTime(file);
-                        if(!item.IsFolder) 
-                        {
-                            index.TryAdd(key, item);                            
-                        }
+                        
+                        index.TryAdd(key, item);                            
+                        UpdatedIndex.TryAdd(key,item);   
+                        
                     }                    
                 }
                 
@@ -187,7 +189,7 @@ namespace sync_client
                 {
                     using (var stream = File.OpenRead(file))
                     {
-                        return md5.ComputeHash(stream).ToString();
+                        return BitConverter.ToString(md5.ComputeHash(stream));
                     }
                 }
             }

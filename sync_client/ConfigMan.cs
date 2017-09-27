@@ -14,6 +14,7 @@ namespace sync_client
         public string ServerAddress {get;set;}
         public int ServerPort {get;set;}
         public bool IsSSL {get;set;}
+        public int IntervalSec {get;set;}
 
 
         public ConfigMan()
@@ -25,6 +26,7 @@ namespace sync_client
             ServerAddress ="127.0.0.1";
             ServerPort = 8001;
             IsSSL = false;
+            IntervalSec = 30;
             try 
             {
                 JObject jso = JObject.Parse(File.ReadAllText(@"./clientConfig.json"));
@@ -36,9 +38,11 @@ namespace sync_client
                 ServerAddress = jso["server_address"].ToObject<string>();
                 ServerPort = jso["server_port"].ToObject<int>();      
                 IsSSL = jso["use_ssl"].ToObject<bool>();
+                IntervalSec = jso["interval_second"].ToObject<int>();
             }
-            catch(System.Exception)
+            catch(System.Exception ex)
             {
+                Program.logger.Fatal("Error loading config file", ex);
                 if(ScanBase.Count==0)
                     ScanBase.Add(@"./");                
             }

@@ -91,7 +91,7 @@ namespace sync_client
             }
             catch(Exception ex)
             {                
-                Debug.Print(ex.Message);
+                Program.logger.Error("GetServerIndex Exception",ex);
                 return null;
             }
         }
@@ -107,7 +107,7 @@ namespace sync_client
             }
             catch(Exception ex)
             {                
-                Debug.Print(ex.Message);
+                Program.logger.Error("UpdateServerIndex Exception",ex);
                 return null;
             }
         }
@@ -136,7 +136,7 @@ namespace sync_client
             }
             catch(Exception ex)
             {                
-                Debug.Print(ex.Message);                
+                Program.logger.Error("Download File Exception", ex);
             }
         }
 
@@ -155,7 +155,7 @@ namespace sync_client
             }
             catch(Exception ex)
             {                
-                Debug.Print(ex.Message);                
+                Program.logger.Error("Upload Exception",ex);
             }
         }
         #endregion 

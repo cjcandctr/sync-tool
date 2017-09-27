@@ -12,6 +12,9 @@ using System.Diagnostics;
 
 namespace sync_server
 {
+    //TODO User password
+    //TODO User storage seperate
+    //TODO SSL
     public class SyncServer
     {                
         DateTime LatestUpdateTime;
@@ -26,9 +29,9 @@ namespace sync_server
             scanbase.Add(Conf.StorageLocation);
             fc = new FileScanner(scanbase, null, 0);
             fc.ServerStorageBase = Conf.StorageLocation;
-            fc.Scan();
-            Debug.Print("HOHO: server file index setup");
+            fc.Scan();            
             StartListener();
+            Program.logger.Info("Server started");
         }
 
         private void StartListener()
@@ -50,7 +53,7 @@ namespace sync_server
 
         public void Service()
         {
-            Debug.Print("HOHO: server is listening " + Conf.Port + " port in thread ID " + Thread.CurrentThread.ManagedThreadId);
+            Program.logger.Info("HOHO: server is listening " + Conf.Port + " port in thread ID " + Thread.CurrentThread.ManagedThreadId);
             SocketConnector socon = new SocketConnector(listener);
             while (IsStart)
             {
@@ -76,6 +79,7 @@ namespace sync_server
                 }
                 if(command == CommandEnum.idle_timeout_command)
                 {
+                    Program.logger.Info("connection timed out");
                     Thread t = new Thread(new ThreadStart(Service));
                     t.Start();
                     break;
@@ -85,6 +89,7 @@ namespace sync_server
 
         private void SendIndexUpdate(SocketConnector socon)
         {
+            Program.logger.Info("SendIndexUpdate");
             fc.Scan();            
             socon.SendIndexDict(fc.UpdatedIndex);            
             socon.SendACK(CommandEnum.get_index_update.ToString());
@@ -92,36 +97,22 @@ namespace sync_server
 
         private void ReveiveAndSave(SocketConnector socon)
         {
-            string name = socon.ReveiveAndSave();
-            Debug.Print(name + " \n" );            
-                                                
-            var key = name.Replace(Conf.StorageLocation, "");
-            if(key.StartsWith(@"_root_/"))
-            {
-                key = key.Replace(@"_root_/", "/");
-            }
-            else
-            { 
-                key = key.Insert(1,":");                            
-            }
-            if(fc.FullIndex.ContainsKey(key))
-            {
-                var item = fc.FullIndex.GetValueOrDefault(key);
-                //TODO method to ensure
-                
-            }
-
+            
+            string name = socon.ReveiveAndSave();             
+            Program.logger.Info("ReveiveAndSave: " + name);
             socon.SendACK(CommandEnum.create_file.ToString());
         }
 
         private void SendRequestFile(SocketConnector socon)
         {
+            Program.logger.Info("SendRequestFile");
             socon.SendRequestFile();   
             socon.SendACK(CommandEnum.request_server_file.ToString());         
         }
 
         private void SendFullIndex(SocketConnector socon)
         {
+            Program.logger.Info("SendFullIndex");
             var index = fc.Scan();
             
             socon.SendIndexDict(index);

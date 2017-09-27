@@ -14,35 +14,47 @@ namespace sync_client
         Dictionary<string, IndexItem> serverIndex = null;
         FileScanner scn;
         SocketConnector conn;
-        int intervalInSecond = 10;
+        int intervalInSecond = 30;
         bool IsStart = true;
         internal void Start()
         {                        
             scn = new FileScanner(conf.ScanBase, conf.IgnoredPath, conf.SizeLimit);
+            intervalInSecond = conf.IntervalSec;
             while(IsStart)
             {
                 var localIndex = scn.Scan();
                 serverIndex = UpdateServerIndex(serverIndex);
                 var tuple = BuildSyncItem(localIndex, serverIndex);
                 SyncLocal(tuple.Item1);
-                SyncServer(tuple.Item2);
+                SyncServer(tuple.Item2);                            
                 Thread.Sleep(intervalInSecond * 1000);
             }
             
         }
+
+        private void LogSyncItems(List<SyncItem> items)
+        {
+            if(items!=null)
+            foreach(var item in items)
+            {
+                Program.logger.Debug(item.ChangeType + ": " + item.IndexItem.RealPath);
+            }
+        }
+
         private Dictionary<string, IndexItem> UpdateServerIndex(Dictionary<string, IndexItem> serverIndex)
         {
-            //Mockup here:            
-            //FileScanner.MockServerIndex();
             if(conn == null) conn = new SocketConnector(); 
             if(serverIndex == null) 
-            {                
+            {
                 serverIndex = conn.GetServerIndex();                
+                LogIndex(serverIndex);
                 return serverIndex;        
             }
             else
             {
                 var updated = conn.UpdateServerIndex();
+                if(updated == null) return serverIndex;
+                LogIndex(updated);
                 foreach(var pair in updated)
                 {
                     if(serverIndex.ContainsKey(pair.Key))
@@ -52,10 +64,17 @@ namespace sync_client
                     serverIndex.Add(pair.Key,pair.Value);
                 }
             }
-
-            //Dictionary<string, IndexItem> updateIndex = conn.UpdateServerIndex();
             
             return serverIndex;
+        }
+        
+        private void LogIndex(Dictionary<string, IndexItem> updatedIndex)
+        {
+            if (updatedIndex != null)
+                foreach(var pair in updatedIndex)
+                {
+                    Program.logger.Debug(pair.Key);
+                }
         }
 
         private Tuple<List<SyncItem>,List<SyncItem>> BuildSyncItem(Dictionary<string, IndexItem> localIndex, Dictionary<string, IndexItem> serverIndex)
@@ -74,7 +93,7 @@ namespace sync_client
                 {
                     var localItem = localPair.Value;
                     var serverItem = serverIndex.GetValueOrDefault(localPair.Key);
-
+                    if(localItem.FileHash == serverItem.FileHash) continue;
                     //TODO Server delete the file
                     if(localItem.IsChanged && !serverItem.IsChanged)
                     {
@@ -119,6 +138,7 @@ namespace sync_client
 
         private async void SyncServer(List<SyncItem> syncItems)
         {
+            LogSyncItems(syncItems);
             if (syncItems.Count<=0) return ;
             foreach(var item in syncItems)
             {
@@ -154,6 +174,7 @@ namespace sync_client
 
         private async void SyncLocal(List<SyncItem> syncItems)
         {            
+            LogSyncItems(syncItems);
             if (syncItems.Count<=0) return ;
             foreach(var item in syncItems)
             {
@@ -165,12 +186,30 @@ namespace sync_client
                     case SyncChangeType.Delete:
                         break;
                     case SyncChangeType.Update:
+                        UpdateFile(item);
                         break;
                     case SyncChangeType.Conflict:
                         break;
                 }
             }
             //throw new NotImplementedException();
+        }
+
+        private void UpdateFile(SyncItem item)
+        {
+            conn.DownloadTo(item);
+            var name = "";
+            if(item.IndexItem.Name.StartsWith(@"_root_"))
+            {
+                name = item.IndexItem.Name.Replace(@"_root_", "");
+            }
+            else 
+            {
+                name = item.IndexItem.Name.Insert(1,":");
+            }
+
+            (new FileInfo(name)).Directory.Create();
+            File.WriteAllBytes(name, item.Data);
         }
 
         private void CreateFile(SyncItem item)
